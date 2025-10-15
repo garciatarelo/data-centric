@@ -1,0 +1,1 @@
+<img src="{{ asset('img/logo.png') }}" alt="{{ config('app.name', 'Data-Centric') }}" {{ $attributes->merge(['class' => 'w-auto h-32 mx-auto mt-12']) }} style="transform: scale(1.5); margin-top: -100px; padding-bottom: 0;" />
