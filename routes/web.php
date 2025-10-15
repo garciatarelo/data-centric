@@ -26,9 +26,7 @@ Route::middleware(['auth'])->group(function () {
         })->name('dashboard');
         
         // Rutas para dispositivos
-        Route::get('/devices', function () {
-            return view('admin.devices.index');
-        })->name('devices.index');
+        Route::resource('devices', \App\Http\Controllers\Admin\DeviceController::class);
         
         // Rutas para asignaciones
         Route::get('/assignments', function () {

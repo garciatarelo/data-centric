@@ -35,6 +35,14 @@
                 <span :class="sidebarToggle ? 'lg:hidden' : ''" class="ml-3">Dashboard</span>
             </a>
 
+              <!-- Users Link -->
+            <a href="{{ route('admin.users.index') }}" class="flex items-center px-4 py-3 mb-2 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 dark:bg-gray-800' : '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                </svg>
+                <span :class="sidebarToggle ? 'lg:hidden' : ''" class="ml-3">Usuarios</span>
+            </a>
+            
             <!-- Devices Link -->
             <a href="{{ route('admin.devices.index') }}" class="flex items-center px-4 py-3 mb-2 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 {{ request()->routeIs('admin.devices.*') ? 'bg-gray-100 dark:bg-gray-800' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -52,13 +60,7 @@
                 <span :class="sidebarToggle ? 'lg:hidden' : ''" class="ml-3">Asignaciones</span>
             </a>
 
-            <!-- Users Link -->
-            <a href="{{ route('admin.users.index') }}" class="flex items-center px-4 py-3 mb-2 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 dark:bg-gray-800' : '' }}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                </svg>
-                <span :class="sidebarToggle ? 'lg:hidden' : ''" class="ml-3">Usuarios</span>
-            </a>
+          
         </nav>
     </div>
 </aside>

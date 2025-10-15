@@ -26,18 +26,20 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'string', 'min:8'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'role' => ['required', 'string', 'in:admin,user'],
+            'role' => ['nullable', 'string', 'in:admin,user'],
         ]);
 
         $user = User::create([
             'name' => $request->name,
+            'nickname' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
-            'role' => $request->role,
+            'role' => $request->role ?? 'user',
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'Usuario creado correctamente');
@@ -54,8 +56,20 @@ class UserController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(User $user)
+    public function edit(Request $request, User $user)
     {
+        // Si la petición espera JSON, retornar los datos del usuario
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->nickname,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+            ]);
+        }
+        
         return view('admin.users.edit', compact('user'));
     }
 
@@ -66,6 +80,7 @@ class UserController extends Controller
     {
         $rules = [
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['nullable', 'string', 'max:20'],
             'role' => ['required', 'string', 'in:admin,user'],
@@ -73,12 +88,13 @@ class UserController extends Controller
 
         // Solo validar la contraseña si se está actualizando
         if ($request->filled('password')) {
-            $rules['password'] = ['required', 'confirmed', Rules\Password::defaults()];
+            $rules['password'] = ['string', 'min:8'];
         }
 
         $request->validate($rules);
 
         $user->name = $request->name;
+        $user->nickname = $request->username;
         $user->email = $request->email;
         $user->phone = $request->phone;
         $user->role = $request->role;
