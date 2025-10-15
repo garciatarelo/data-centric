@@ -36,9 +36,7 @@ Route::middleware(['auth'])->group(function () {
         })->name('assignments.index');
         
         // Rutas para usuarios
-        Route::get('/users', function () {
-            return view('admin.users.index');
-        })->name('users.index');
+        Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
     });
 });
 
