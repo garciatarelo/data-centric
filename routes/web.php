@@ -29,7 +29,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('devices', \App\Http\Controllers\Admin\DeviceController::class);
         
         // Rutas para asignaciones
-        Route::controller(\App\Http\Controllers\AssignmentController::class)->group(function () {
+        Route::controller(\App\Http\Controllers\Admin\AssignmentController::class)->group(function () {
             Route::get('/assignments', 'index')->name('assignments.index');
             Route::post('/assignments', 'store')->name('assignments.store');
             Route::get('/assignments/{assignment}', 'show')->name('assignments.show');

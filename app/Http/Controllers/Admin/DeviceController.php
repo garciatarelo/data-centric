@@ -90,6 +90,19 @@ class DeviceController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        // Regla de negocio: No permitir establecer "available" si tiene una asignación activa
+        if ($request->status === 'available' && $device->currentAssignment()->exists()) {
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede cambiar a Disponible: el dispositivo sigue asignado a un usuario. Elimina la asignación activa primero.'
+                ], 422);
+            }
+            return back()
+                ->with('error', 'No se puede cambiar a Disponible: el dispositivo sigue asignado a un usuario. Elimina la asignación activa primero.')
+                ->withInput();
+        }
+
         $device->serial = $request->serial;
         $device->brand = $request->brand;
         $device->model = $request->model;

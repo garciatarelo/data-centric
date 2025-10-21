@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class AssignmentController extends Controller
 {
@@ -17,21 +18,42 @@ class AssignmentController extends Controller
     {
         $assignments = Assignment::with(['device', 'user', 'assignedBy'])->get();
         $devices = Device::all();
+        // Solo dispositivos disponibles y sin asignación activa para el modal de crear
+        $availableDevices = Device::where('status', 'available')
+            ->whereDoesntHave('currentAssignment')
+            ->get();
         $users = User::all();
-        return view('admin.assignments.index', compact('assignments', 'devices', 'users'));
+        return view('admin.assignments.index', compact('assignments', 'devices', 'availableDevices', 'users'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'device_id' => 'required|exists:devices,id',
             'user_id' => 'required|exists:users,id',
         ]);
 
+        if ($validator->fails()) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Errores de validación',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+            return back()->withErrors($validator)->withInput();
+        }
+
         $device = Device::findOrFail($request->device_id);
         
         if ($device->status !== 'available') {
-            return back()->with('error', 'El dispositivo seleccionado no está disponible. Estado actual: ' . ucfirst($device->status));
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El dispositivo seleccionado no está disponible. Estado actual: ' . ucfirst($device->status)
+                    ], 422);
+                }
+                return back()->with('error', 'El dispositivo seleccionado no está disponible. Estado actual: ' . ucfirst($device->status));
         }
 
         $existingAssignment = Assignment::where('device_id', $device->id)
@@ -39,7 +61,13 @@ class AssignmentController extends Controller
             ->first();
 
         if ($existingAssignment) {
-            return back()->with('error', 'Este dispositivo ya está asignado a otro usuario.');
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Este dispositivo ya está asignado a otro usuario.'
+                    ], 422);
+                }
+                return back()->with('error', 'Este dispositivo ya está asignado a otro usuario.');
         }
 
         $existingAssignment = Assignment::where('user_id', $request->user_id)
@@ -48,7 +76,13 @@ class AssignmentController extends Controller
             ->first();
 
         if ($existingAssignment) {
-            return back()->with('error', 'Este usuario ya tiene una asignación activa de este dispositivo.');
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Este usuario ya tiene una asignación activa de este dispositivo.'
+                    ], 422);
+                }
+                return back()->with('error', 'Este usuario ya tiene una asignación activa de este dispositivo.');
         }
 
         $assignment = Assignment::create([
@@ -62,49 +96,41 @@ class AssignmentController extends Controller
 
         $device->update(['status' => 'assigned']);
 
-        try {
-            Storage::makeDirectory('public/power_of_attorney');
+        // Recargar la asignación con todas las relaciones necesarias
+        $assignment->load(['device', 'user', 'assignedBy']);
 
+        try {
             $pdf = PDF::loadView('admin.assignments.power-of-attorney', [
-                'assignment' => $assignment->load(['device', 'user', 'assignedBy'])
+                'assignment' => $assignment
             ])->setOption('isRemoteEnabled', true)
               ->setOption('isHtml5ParserEnabled', true)
               ->setOption('enable_remote', true)
               ->setOption('enable_html5_parser', true)
               ->setPaper('a4');
 
-            $filename = 'Carta Poder - Asignación ' . $assignment->id . '.pdf';
-            $path = 'power_of_attorney/' . $filename;
+            $filename = 'carta_poder_asignacion_' . $assignment->id . '.pdf';
             
-            if (!Storage::disk('public')->exists('power_of_attorney')) {
-                Storage::disk('public')->makeDirectory('power_of_attorney');
-            }
+            Storage::disk('public')->put($filename, $pdf->output());
             
-            Storage::disk('public')->put($path, $pdf->output());
-            
-            $assignment->update(['power_of_attorney' => $path]);
+            $assignment->update(['power_of_attorney' => $filename]);
 
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Asignación creada exitosamente.'
-                ]);
-            }
-            
-            return redirect()->route('admin.assignments.index')
-                ->with('success', 'Asignación creada exitosamente.');
         } catch (\Exception $e) {
-            report($e);
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al crear la asignación: ' . $e->getMessage()
-                ], 422);
-            }
-            
-            return redirect()->route('admin.assignments.index')
-                ->with('error', 'La asignación se creó pero hubo un problema al generar el PDF. Por favor, contacta al administrador.');
+            \Log::error('Error generando PDF: ' . $e->getMessage(), [
+                'assignment_id' => $assignment->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Continuar sin PDF, no fallar la asignación
         }
+
+        if (request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Asignación creada exitosamente.'
+            ]);
+        }
+        
+        return redirect()->route('admin.assignments.index')
+            ->with('success', 'Asignación creada exitosamente.');
     }
 
     public function edit(Assignment $assignment)
@@ -148,7 +174,7 @@ class AssignmentController extends Controller
                 Storage::delete('public/' . $assignment->power_of_attorney);
             }
             
-            $path = $request->file('power_of_attorney')->store('power_of_attorney', 'public');
+            $path = $request->file('power_of_attorney')->store('/', 'public');
             $assignment->update(['power_of_attorney' => $path]);
         }
 

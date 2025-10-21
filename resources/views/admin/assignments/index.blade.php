@@ -116,44 +116,61 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
                     </button>
                 </div>
-                <!-- Este es el formulario para crear una nueva asignación -->
-                <!-- Uso Alpine.js para manejar el envío del formulario sin recargar la página -->
-                <form x-data="{ 
-                        // Esta función se ejecuta cuando envío el formulario
-                        submitForm(e) {
-                            // Evito que el formulario se envíe normal
-                            e.preventDefault();
-                            // Agarro el formulario y sus datos
-                            const form = e.target;
-                            const formData = new FormData(form);
-
-                            // Mando los datos al servidor usando AJAX
-                            fetch(form.action, {
-                                method: 'POST',
-                                body: formData,
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                // Si todo salió bien
-                                if (data.success) {
-                                    // Cierro el modal
-                                    show = false;
-                                    // Recargo la página para ver la nueva asignación
-                                    window.location.reload();
-                                }
-                            })
-                            .catch(error => {
-                                // Si algo salió mal, lo muestro en la consola
-                                console.error('Error:', error);
-                            });
-                        }
-                    }" 
-                    @submit.prevent="submitForm"
-                    action="{{ route('admin.assignments.store') }}" 
+                <form action="{{ route('admin.assignments.store') }}" 
                     method="POST" 
+                    @submit.prevent="
+                        const formData = new FormData($event.target);
+                        const btn = $event.target.querySelector('button[type=submit]');
+                        btn.disabled = true;
+                        btn.textContent = 'Procesando...';
+                        
+                        fetch('{{ route('admin.assignments.store') }}', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(async response => {
+                            console.log('Status:', response.status);
+                            const ct = response.headers.get('content-type') || '';
+                            if (!response.ok) {
+                                // intenta parsear JSON de error si viene
+                                if (ct.includes('application/json')) {
+                                    const errJson = await response.json();
+                                    throw new Error(errJson.message || 'Error del servidor');
+                                }
+                                const text = await response.text();
+                                console.error('Respuesta de error no-JSON:', text);
+                                throw new Error('Error del servidor: ' + response.status);
+                            }
+                            if (ct.includes('application/json')) {
+                                return await response.json();
+                            } else {
+                                const text = await response.text();
+                                console.error('Respuesta no JSON:', text.substring(0, 200));
+                                throw new Error('Respuesta inválida del servidor');
+                            }
+                        })
+                        .then(data => {
+                            console.log('Data recibida:', data);
+                            if (data.success) {
+                                window.location.reload();
+                            } else {
+                                btn.disabled = false;
+                                btn.textContent = 'Asignar';
+                                alert(data.message || 'Error desconocido');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error completo:', error);
+                            btn.disabled = false;
+                            btn.textContent = 'Asignar';
+                            alert('Error: ' + error.message);
+                        });
+                    "
                     class="p-6">
                     @csrf
                     <div class="space-y-6">
@@ -177,12 +194,17 @@
                                 class="block w-full px-4 py-2 text-base bg-gray-800 border border-gray-600 text-white rounded-lg 
                                 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" required>
                                 <option value="">Seleccionar dispositivo</option>
-                                @foreach($devices ?? [] as $device)
+                                @forelse($availableDevices ?? [] as $device)
                                     <option value="{{ $device->id }}" class="text-white bg-gray-800">
                                         {{ $device->brand }} {{ $device->model }} ({{ $device->serial }})
                                     </option>
-                                @endforeach
+                                @empty
+                                    <option value="" disabled class="text-gray-400">No hay dispositivos disponibles</option>
+                                @endforelse
                             </select>
+                            @if(($availableDevices ?? collect())->isEmpty())
+                                <p class="text-sm text-white mt-2">Todos los dispositivos están asignados o no disponibles.</p>
+                            @endif
                         </div>
 
                     </div>
@@ -209,7 +231,7 @@
             userId: '',
             deviceId: '',
             assignedDate: '',
-            returnDate: '',
+            returnedAt: '',
             status: 'active',
             notes: ''
         }" 
@@ -223,7 +245,7 @@
                     userId = data.user_id;
                     deviceId = data.device_id;
                     assignedDate = data.assigned_date;
-                    returnDate = data.return_date || '';
+                    returnedAt = data.return_date || '';
                     status = data.status;
                     notes = data.notes || '';
                     $nextTick(() => {
