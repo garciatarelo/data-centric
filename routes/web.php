@@ -29,9 +29,15 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('devices', \App\Http\Controllers\Admin\DeviceController::class);
         
         // Rutas para asignaciones
-        Route::get('/assignments', function () {
-            return view('admin.assignments.index');
-        })->name('assignments.index');
+        Route::controller(\App\Http\Controllers\AssignmentController::class)->group(function () {
+            Route::get('/assignments', 'index')->name('assignments.index');
+            Route::post('/assignments', 'store')->name('assignments.store');
+            Route::get('/assignments/{assignment}', 'show')->name('assignments.show');
+            Route::get('/assignments/{assignment}/edit', 'edit')->name('assignments.edit');
+            Route::put('/assignments/{assignment}', 'update')->name('assignments.update');
+            Route::delete('/assignments/{assignment}', 'destroy')->name('assignments.destroy');
+            Route::get('/assignments/{assignment}/download-pdf', 'downloadPdf')->name('assignments.download-pdf');
+        });
         
         // Rutas para usuarios
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
