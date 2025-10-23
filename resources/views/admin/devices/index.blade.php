@@ -198,8 +198,7 @@
             type: 'laptop',
             imei: '', 
             status: 'available',
-            notes: '',
-            hasActiveAssignment: false
+            notes: ''
         }" 
         x-show="show" 
         class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-start justify-center p-4"
@@ -221,7 +220,6 @@
                     imei = data.imei || '';
                     status = data.status || 'available';
                     notes = data.notes || '';
-                    hasActiveAssignment = !!data.has_active_assignment;
                     $nextTick(() => {
                         document.getElementById('editDeviceForm').action = `/admin/devices/${deviceId}`;
                     });
@@ -290,14 +288,11 @@
                                 <select id="edit_status" name="status" x-model="status"
                                     class="block w-full px-4 py-2 text-base bg-gray-800 border border-gray-600 text-white rounded-lg 
                                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" required>
-                                    <option value="available" class="text-white bg-gray-800" :disabled="hasActiveAssignment">Disponible</option>
+                                    <option value="available" class="text-white bg-gray-800">Disponible</option>
                                     <option value="assigned" class="text-white bg-gray-800">Asignado</option>
                                     <option value="maintenance" class="text-white bg-gray-800">Mantenimiento</option>
                                     <option value="retired" class="text-white bg-gray-800">Retirado</option>
                                 </select>
-                                <p x-show="hasActiveAssignment" class="text-sm text-white mt-2">
-                                    No se puede cambiar a Disponible: el dispositivo sigue asignado a un usuario. Elimina la asignación activa primero.
-                                </p>
                             </div>
                             <div>
                                 <label for="edit_notes" class="block text-base font-medium text-white mb-2">Notas</label>

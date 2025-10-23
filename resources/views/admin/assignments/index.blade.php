@@ -61,7 +61,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ $assignment->returned_at ?? '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                                     @if($assignment->power_of_attorney)
-                                        <a href="{{ route('admin.assignments.download-pdf', $assignment->id) }}" target="_blank" 
+                                        <a href="{{ asset('storage/' . $assignment->power_of_attorney) }}" target="_blank" 
                                            class="text-blue-500 hover:text-blue-400">
                                             Ver PDF
                                         </a>
